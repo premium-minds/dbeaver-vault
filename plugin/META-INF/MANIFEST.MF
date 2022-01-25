@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Vault
+Bundle-SymbolicName: com.premiumminds.dbeaver.vault;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Premium Minds
+Automatic-Module-Name: com.premiumminds.dbeaver.vault
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Require-Bundle: org.jkiss.dbeaver.model,
+ com.google.gson,
+ org.eclipse.swt,
+ org.jkiss.dbeaver.ui

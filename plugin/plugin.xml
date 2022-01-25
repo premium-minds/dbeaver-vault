@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+    <extension point="org.jkiss.dbeaver.dataSourceAuth">
+        <authModel
+                id="vault"
+                label="Vault"
+                description="Vault authentication"
+                class="com.premiumminds.dbeaver.vault.VaultAuthModel"
+                default="true">
+        </authModel>
+    </extension>
+    
+    <extension point="org.jkiss.dbeaver.ui.propertyConfigurator">
+        <propertyConfigurator class="com.premiumminds.dbeaver.vault.VaultAuthModel" uiClass="com.premiumminds.dbeaver.vault.VaultAuthModelConfigurator"/>
+    </extension>
+    
+</plugin>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="com.premiumminds.dbeaver.vault.feature">
+      <category name="dbeaver-vault"/>
+   </feature>
+   <category-def name="dbeaver-vault" label="DBeaver Vault"/>
+</site>
