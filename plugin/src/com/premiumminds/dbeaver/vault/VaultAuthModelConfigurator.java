@@ -13,6 +13,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<D
 
     protected Text secretText;
     protected Text addressText;
+    protected Text tokenFileText;
 
     @Override
     public void createControl(Composite authPanel, Runnable propertyChangeListener) {
@@ -21,20 +22,26 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<D
         usernameLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
 
         secretText = new Text(authPanel, SWT.BORDER);
-        GridData gd1 = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
-        secretText.setLayoutData(gd1);
+        secretText.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
         secretText.addModifyListener(e -> propertyChangeListener.run());
 
         Label addressLabel = UIUtils.createLabel(authPanel, "Address");
         addressLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
 
         addressText = new Text(authPanel, SWT.BORDER);
-        GridData gd2 = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
-        addressText.setLayoutData(gd2);
+        addressText.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
         addressText.addModifyListener(e -> propertyChangeListener.run());
-        
+
+        Label tokenFileLabel = UIUtils.createLabel(authPanel, "Token file");
+        tokenFileLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+
+        tokenFileText = new Text(authPanel, SWT.BORDER);
+        tokenFileText.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
+        tokenFileText.addModifyListener(e -> propertyChangeListener.run());
+
         secretText.setMessage("secret/my-secret");
         addressText.setMessage("http://example.com");
+        tokenFileText.setMessage("$HOME/.vault-token");
 
     }
 
@@ -42,11 +49,15 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<D
     public void loadSettings(DBPDataSourceContainer dataSource) {
         final var secret = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_SECRET);
         final var address = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_ADDRESS);
+        final var tokenFile = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_TOKEN_FILE);
         if (secret != null) {
             secretText.setText(secret);
         }
         if (address != null) {
             addressText.setText(address);
+        }
+        if (tokenFile != null) {
+            tokenFileText.setText(address);
         }
     }
 
@@ -54,6 +65,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<D
     public void saveSettings(DBPDataSourceContainer dataSource) {
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_SECRET, this.secretText.getText());
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_ADDRESS, this.addressText.getText());
+        dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_TOKEN_FILE, this.tokenFileText.getText());
     }
 
     @Override

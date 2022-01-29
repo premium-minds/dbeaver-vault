@@ -6,6 +6,7 @@ public class VaultAuthCredentials implements DBAAuthCredentials  {
 
     private String secret;
     private String vaultHost;
+    private String tokenFile;
 
     public String getSecret() {
         return secret;
@@ -21,6 +22,14 @@ public class VaultAuthCredentials implements DBAAuthCredentials  {
 
     public void setVaultHost(String vaultHost) {
         this.vaultHost = vaultHost;
+    }
+
+    public String getTokenFile() {
+        return tokenFile;
+    }
+
+    public void setTokenFile(String tokenFile) {
+        this.tokenFile = tokenFile;
     }
 
     @Override
