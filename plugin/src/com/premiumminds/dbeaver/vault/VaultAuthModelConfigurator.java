@@ -57,7 +57,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<D
             addressText.setText(address);
         }
         if (tokenFile != null) {
-            tokenFileText.setText(address);
+            tokenFileText.setText(tokenFile);
         }
     }
 
