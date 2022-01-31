@@ -1,4 +1,4 @@
-# Dbeaver Vault plugin
+# DBeaver Vault plugin
 
 Provides database credentials using [Vault dynamic secrets](https://www.vaultproject.io/docs/secrets/databases).
 
