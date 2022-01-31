@@ -5,13 +5,15 @@
       version="1.0.0.qualifier"
       provider-name="Premium Minds">
 
-   <description url="http://www.example.com/description">
-      [Enter Feature Description here.]
-   </description>
+   <description>
+      Provides database credentials using Vault dynamic secrets.
 
-   <copyright url="http://www.example.com/copyright">
-      [Enter Copyright Description here.]
-   </copyright>
+Vault login is not handled by this plugin.
+
+You should manually log in into Vault, which will, using the default Token Helper, create a Vault token file in $HOME/.vault-token.
+
+The recommended way to use this plugin is with a Vault Agent, with Auto-Auth and cache enabled.
+   </description>
 
    <license url="Apache License">
       Apache License
@@ -216,6 +218,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
    </license>
+
+   <url>
+      <update label="DBeaver Vault Update Site" url="https://raw.githubusercontent.com/premium-minds/dbeaver-vault/master/update-site/"/>
+   </url>
 
    <requires>
       <import plugin="org.jkiss.dbeaver.model"/>
