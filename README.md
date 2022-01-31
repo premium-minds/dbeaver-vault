@@ -29,7 +29,7 @@ auto_auth {
     method "aws" {
         config = {
             type = "iam"
-            role = "pre_europe"
+            role = "zzz"
             access_key = "xxx"
             secret_key = "yyy"
             header_value = "https://vault.example.com"
