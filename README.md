@@ -15,6 +15,12 @@ The recommended way to use this plugin is with a [Vault Agent](https://www.vault
     `https://raw.githubusercontent.com/premium-minds/dbeaver-vault/master/update-site/`
  * Make sure _DBeaver Vault_ is checked, then click Next to install the plugin.
 
+## Install from Marketplace
+
+ * [DBeaver Vault](https://marketplace.eclipse.org/content/dbeaver-vault)
+
+[![Drag to your running Eclipse* workspace. *Requires Eclipse Marketplace Client](https://marketplace.eclipse.org/sites/all/themes/solstice/public/images/marketplace/btn-install.svg)](http://marketplace.eclipse.org/marketplace-client-intro?mpc_install=5497069 "Drag to your running Eclipse* workspace. *Requires Eclipse Marketplace Client")
+
 ## Screenshots
 
 ![dbeaver-vault.png](./screenshots/dbeaver-vault.png)
