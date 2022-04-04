@@ -1,6 +1,6 @@
 package com.premiumminds.dbeaver.vault;
 
-import org.jkiss.dbeaver.model.auth.DBAAuthCredentials;
+import org.jkiss.dbeaver.model.access.DBAAuthCredentials;
 
 public class VaultAuthCredentials implements DBAAuthCredentials  {
 
