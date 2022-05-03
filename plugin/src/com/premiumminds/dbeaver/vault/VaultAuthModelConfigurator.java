@@ -9,14 +9,14 @@ import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.ui.IObjectPropertyConfigurator;
 import org.jkiss.dbeaver.ui.UIUtils;
 
-public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<DBPDataSourceContainer> {
+public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<Object, DBPDataSourceContainer> {
 
     protected Text secretText;
     protected Text addressText;
     protected Text tokenFileText;
 
     @Override
-    public void createControl(Composite authPanel, Runnable propertyChangeListener) {
+    public void createControl(Composite authPanel, Object object, Runnable propertyChangeListener) {
 
         Label usernameLabel = UIUtils.createLabel(authPanel, "Secret");
         usernameLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
