@@ -71,19 +71,18 @@ Configure a DBeaver database connection with:
 
 ### Launching Vault Agent automatically
 
-To skip launching the Vault Agent manually, you can configure your system manager to launch it on startup. For `systemd` create a `/etc/systemd/system/vault-agent-dbeaver.service` with:
+To skip launching the Vault Agent manually, you can configure your system manager to launch it on startup. For `systemd` create a `~/.config/systemd/user/vault-agent-dbeaver.service` with:
 ```desktop
 [Unit]
 Description="Vault Agent to serve Tokens - DBeaver"
 
 [Service]
-User=froque
-WorkingDirectory=/opt/vault
+SyslogIdentifier=vault-agent-dbeaver
 ExecStart=/usr/bin/vault agent -config=/opt/vault-agent-dbeaver.hcl
 Restart=always
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 ```
 
-Launch the Vault Agent with `sudo systemctl start vault-agent-dbeaver`.
+Enable the Vault system unit with `systemctl --user enable vault-agent-dbeaver` and launch the Vault Agent with `systemctl --user start vault-agent-dbeaver`.
