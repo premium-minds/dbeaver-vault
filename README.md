@@ -14,6 +14,7 @@ The recommended way to use this plugin is with a [Vault Agent](https://www.vault
  
     `https://raw.githubusercontent.com/premium-minds/dbeaver-vault/master/update-site/`
  * Make sure _DBeaver Vault_ is checked, then click Next to install the plugin.
+ * See [Optional extensions](https://github.com/dbeaver/dbeaver/wiki/Optional-extensions) if you have any problems installing the plugin
 
 ## Install from Marketplace
 
