@@ -1,6 +1,10 @@
 package com.premiumminds.dbeaver.vault;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -11,6 +15,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.Platform;
@@ -31,13 +37,19 @@ import com.google.gson.GsonBuilder;
 public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
 
     private static final ILog log = Platform.getLog(VaultAuthModel.class);
-    
-    private static final String DEFAULT_VAULT_TOKEN_FILE = ".vault-token";
-
+        
     public static final String PROP_SECRET = "secret";
     public static final String PROP_ADDRESS = "address";
     public static final String PROP_TOKEN_FILE = "token_file";
-
+    private static final String ENV_VAULT_AGENT_ADDR = "VAULT_AGENT_ADDR";
+    private static final String ENV_VAULT_ADDR = "VAULT_ADDR";
+    private static final String ENV_VAULT_CONFIG_PATH = "VAULT_CONFIG_PATH";
+    private static final String DEFAULT_VAULT_CONFIG_FILE = ".vault";
+    private static final String DEFAULT_VAULT_TOKEN_FILE = ".vault-token";
+    private static final String ERROR_VAULT_ADDRESS_NOT_DEFINED = "Vault address not defined";
+    private static final String ERROR_VAULT_SECRET_NOT_DEFINED = "Vault secret not defined";
+    private static final String ERROR_VAULT_TOKEN_NOT_DEFINED = "Vault token not defined";
+    
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(10))
@@ -65,57 +77,147 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
     }
 
     @Override
-    public Object initAuthentication(DBRProgressMonitor monitor, DBPDataSource dataSource, VaultAuthCredentials credentials, DBPConnectionConfiguration configuration, Properties connectProps) throws DBException {
+    public Object initAuthentication(
+            DBRProgressMonitor monitor, 
+            DBPDataSource dataSource, 
+            VaultAuthCredentials credentials, 
+            DBPConnectionConfiguration configuration, 
+            Properties connectProps) throws DBException 
+    {
 
-        final var address = credentials.getVaultHost();
-        final var secret = credentials.getSecret();
+        try {
 
-        if (address != null && secret != null) {
+            final var address = getAddress(credentials);
+            final var secret = getSecret(credentials);
+            final var token = getToken(credentials, address);
+
+            log.info("Address used: " + address);
+            log.info("Secret used: " + secret);
 
             final var uri = URI.create(address).resolve("/v1/").resolve(secret);
+            
+            final var request = HttpRequest.newBuilder()
+                    .GET()
+                    .header("X-Vault-Token", token)
+                    .uri(uri)
+                    .build();
 
-            try {
+            final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-                final var token = getTokenFilePath(credentials);
+            if (response.statusCode() != HttpURLConnection.HTTP_OK) {
+                throw new RuntimeException("Problem connecting to Vault: " + response.body());
+            } else {
+                final var gson = new GsonBuilder()
+                        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                        .create();
+                final var secretResponse = gson.fromJson(response.body(), DynamicSecretResponse.class);
 
-                final var request = HttpRequest.newBuilder()
-                        .GET()
-                        .header("X-Vault-Token", token)
-                        .uri(uri)
-                        .build();
+                log.info("Username used " + secretResponse.getData().getUsername());
 
-                final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-                    throw new DBException(response.body());
-                } else {
-                    final var gson = new GsonBuilder()
-                            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                            .create();
-                    final var secretResponse = gson.fromJson(response.body(), DynamicSecretResponse.class);
-
-                    log.info("Username used " + secretResponse.getData().getUsername());
-
-                    connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, secretResponse.getData().getUsername());
-                    connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, secretResponse.getData().getPassword());
-                }
-            } catch (IOException | InterruptedException e) {
-                throw new DBException(e.getLocalizedMessage(), e);
+                connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, secretResponse.getData().getUsername());
+                connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, secretResponse.getData().getPassword());
             }
+        } catch (IOException | InterruptedException e) {
+            throw new DBException("Problem connecting to Vault: " + e.getMessage(), e);
         }
 
         return credentials;
     }
 
-    private String getTokenFilePath(VaultAuthCredentials credentials) throws IOException {
-        Path path;
+
+	private String getAddress(VaultAuthCredentials credentials) {
+	    final var definedAddress = credentials.getVaultHost();
+	    if (definedAddress != null && !definedAddress.isBlank()) {
+	        return definedAddress;
+	    } else {
+	        final String vaultAgentAddrEnv = System.getenv(ENV_VAULT_AGENT_ADDR);
+	        if (vaultAgentAddrEnv != null && !vaultAgentAddrEnv.isBlank()){
+	            return vaultAgentAddrEnv;
+	        }
+	        final String vaultAddrEnv = System.getenv(ENV_VAULT_ADDR);
+	        if (vaultAddrEnv != null && !vaultAddrEnv.isBlank()){
+	            return vaultAddrEnv;
+	        }
+	    }
+	    throw new RuntimeException(ERROR_VAULT_ADDRESS_NOT_DEFINED);
+	}
+
+	private String getSecret(VaultAuthCredentials credentials) {
+	    final var secret = credentials.getSecret();
+	    if (secret != null && !secret.isBlank()) {
+	        return secret;
+	    }
+	    throw new RuntimeException(ERROR_VAULT_SECRET_NOT_DEFINED);
+	}
+	
+    private String getToken(VaultAuthCredentials credentials, String vaultAddress) throws IOException, InterruptedException {
+
         final var tokenFile = credentials.getTokenFile();
         if (tokenFile != null && !tokenFile.isBlank()) {
-            path = Paths.get(tokenFile);
-        } else {
-            path = Paths.get(System.getProperty("user.home"), DEFAULT_VAULT_TOKEN_FILE);
+            final var path = Paths.get(tokenFile);
+            if (path.toFile().exists()){
+                return Files.readString(path);
+            }
         }
-        return Files.readAllLines(path).get(0);
+
+        final var vaultConfigFile = getConfigFile();
+        if (vaultConfigFile.toFile().exists()){
+            final String token = getTokenFromVaultTokenHelper(vaultConfigFile, vaultAddress);
+            if (token != null){
+                return token;
+            }
+        }
+        final var defaultTokenFilePath = Paths.get(System.getProperty("user.home"), DEFAULT_VAULT_TOKEN_FILE);
+        if (defaultTokenFilePath.toFile().exists()){
+            return Files.readString(defaultTokenFilePath);
+        }
+
+        throw new RuntimeException(ERROR_VAULT_TOKEN_NOT_DEFINED);
+    }
+    
+    private Path getConfigFile(){
+        Path vaultConfigPath = Paths.get(System.getProperty("user.home"), DEFAULT_VAULT_CONFIG_FILE) ;
+
+        final String vaultConfigPathEnv = System.getenv(ENV_VAULT_CONFIG_PATH);
+        if (vaultConfigPathEnv != null && !vaultConfigPathEnv.isBlank()){
+            vaultConfigPath = Paths.get(vaultConfigPathEnv );
+        }
+
+        return vaultConfigPath;
+    }
+    
+    private String getTokenFromVaultTokenHelper(Path configFile, String vaultAddress)
+            throws IOException, InterruptedException
+    {
+    	final Gson gson = new Gson();
+    	final VaultConfig config = gson.fromJson(new FileReader(configFile.toFile()), VaultConfig.class);
+    	
+        if (config.tokenHelper != null && !config.tokenHelper.isBlank()){
+            final ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.environment().putIfAbsent(ENV_VAULT_ADDR, vaultAddress);
+            final Process process = processBuilder
+                    .command(config.tokenHelper, "get")
+                    .start();
+
+            final StreamGobbler streamGobblerErr = new StreamGobbler(process.getErrorStream());
+            final StreamGobbler streamGobblerOut = new StreamGobbler(process.getInputStream());
+
+            streamGobblerErr.start();
+            streamGobblerOut.start();
+
+            if (!process.waitFor(10, TimeUnit.SECONDS)){
+                throw new RuntimeException("Failure running Vault Token Helper: " + config.tokenHelper + ", took too long to respond.");
+            }
+
+            streamGobblerOut.join();
+            streamGobblerErr.join();
+
+            if (streamGobblerErr.output != null && !streamGobblerErr.output.isBlank()){
+                throw new RuntimeException("Failure running Vault Token Helper: " + config.tokenHelper + ": " + streamGobblerErr.output);
+            }
+            return streamGobblerOut.output;
+        }
+        return null;
     }
 
     @Override
@@ -126,5 +228,26 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
     @Override
     public void refreshCredentials(DBRProgressMonitor monitor, DBPDataSourceContainer dataSource, DBPConnectionConfiguration configuration, VaultAuthCredentials credentials) throws DBException {
 
+    }
+    
+    private static class StreamGobbler extends Thread {
+
+        private final InputStream stream;
+
+        private String output;
+
+        StreamGobbler(final InputStream stream) {
+            this.stream = stream;
+        }
+
+        @Override
+        public void run() {
+
+            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream))) {
+                output = bufferedReader.lines().collect(Collectors.joining());
+            } catch (IOException e) {
+                throw new RuntimeException("Problem reading from Vault Token Helper: " + e.getMessage(), e);
+            }
+        }
     }
 }
