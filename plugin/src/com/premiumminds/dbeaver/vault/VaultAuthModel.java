@@ -230,6 +230,11 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
 
     }
     
+	@Override
+	public boolean isDatabaseCredentialsPresent(DBPConnectionConfiguration configuration) {
+		return false;
+	}
+    
     private static class StreamGobbler extends Thread {
 
         private final InputStream stream;
