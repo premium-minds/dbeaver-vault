@@ -87,3 +87,8 @@ WantedBy=default.target
 ```
 
 Enable the Vault system unit with `systemctl --user enable vault-agent-dbeaver` and launch the Vault Agent with `systemctl --user start vault-agent-dbeaver`.
+
+
+## Limitations
+
+Support for parsing Vault config file from environment variable `VAULT_CONFIG_PATH` or default `~/.vault` is restricted to [JSON syntax](https://github.com/hashicorp/hcl/blob/main/json/spec.md) only. It does not support [native HCL syntax](https://github.com/hashicorp/hcl/blob/main/hclsyntax/spec.md). 

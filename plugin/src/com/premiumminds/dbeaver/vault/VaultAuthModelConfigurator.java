@@ -75,7 +75,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
 
     @Override
     public boolean isComplete() {
-        return !secretText.getText().isBlank() && !addressText.getText().isBlank();
+        return !secretText.getText().isBlank();
     }
 
 }
