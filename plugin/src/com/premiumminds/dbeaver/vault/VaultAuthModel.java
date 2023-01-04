@@ -215,33 +215,38 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
             throws IOException, InterruptedException
     {
     	final Gson gson = new Gson();
-    	final VaultConfig config = gson.fromJson(new FileReader(configFile.toFile()), VaultConfig.class);
-    	
-        if (config.tokenHelper != null && !config.tokenHelper.isBlank()){
-            final ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.environment().putIfAbsent(ENV_VAULT_ADDR, vaultAddress);
-            final Process process = processBuilder
-                    .command(config.tokenHelper, "get")
-                    .start();
+    	try(final var fileReader = new FileReader(configFile.toFile())){
+    		
+    		final VaultConfig config = gson.fromJson(fileReader, VaultConfig.class);
+        	
+            if (config.tokenHelper != null && !config.tokenHelper.isBlank()){
+                final ProcessBuilder processBuilder = new ProcessBuilder();
+                processBuilder.environment().putIfAbsent(ENV_VAULT_ADDR, vaultAddress);
+                final Process process = processBuilder
+                        .command(config.tokenHelper, "get")
+                        .start();
 
-            final StreamGobbler streamGobblerErr = new StreamGobbler(process.getErrorStream());
-            final StreamGobbler streamGobblerOut = new StreamGobbler(process.getInputStream());
+                final StreamGobbler streamGobblerErr = new StreamGobbler(process.getErrorStream());
+                final StreamGobbler streamGobblerOut = new StreamGobbler(process.getInputStream());
 
-            streamGobblerErr.start();
-            streamGobblerOut.start();
+                streamGobblerErr.start();
+                streamGobblerOut.start();
 
-            if (!process.waitFor(10, TimeUnit.SECONDS)){
-                throw new RuntimeException("Failure running Vault Token Helper: " + config.tokenHelper + ", took too long to respond.");
+                if (!process.waitFor(10, TimeUnit.SECONDS)){
+                    throw new RuntimeException("Failure running Vault Token Helper: " + config.tokenHelper + ", took too long to respond.");
+                }
+
+                streamGobblerOut.join();
+                streamGobblerErr.join();
+
+                if (streamGobblerErr.output != null && !streamGobblerErr.output.isBlank()){
+                    throw new RuntimeException("Failure running Vault Token Helper: " + config.tokenHelper + ": " + streamGobblerErr.output);
+                }
+                return streamGobblerOut.output;
             }
+            
+    	}
 
-            streamGobblerOut.join();
-            streamGobblerErr.join();
-
-            if (streamGobblerErr.output != null && !streamGobblerErr.output.isBlank()){
-                throw new RuntimeException("Failure running Vault Token Helper: " + config.tokenHelper + ": " + streamGobblerErr.output);
-            }
-            return streamGobblerOut.output;
-        }
         return null;
     }
 
