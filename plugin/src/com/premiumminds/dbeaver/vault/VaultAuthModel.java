@@ -14,7 +14,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -55,6 +58,8 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    private static final Map<DynamicSecretKey, DynamicSecretValue> secretsCache = new ConcurrentHashMap<>();
+
     @NotNull
     public VaultAuthCredentials createCredentials() {
         return new VaultAuthCredentials();
@@ -89,40 +94,60 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
 
             final var address = getAddress(credentials);
             final var secret = getSecret(credentials);
-            final var token = getToken(credentials, address);
 
             log.info("Address used: " + address);
             log.info("Secret used: " + secret);
-
-            final var uri = URI.create(address).resolve("/v1/").resolve(secret);
             
-            final var request = HttpRequest.newBuilder()
-                    .GET()
-                    .header("X-Vault-Token", token)
-                    .uri(uri)
-                    .build();
+            DynamicSecretKey key = new DynamicSecretKey(address, secret);
+            DynamicSecretValue value = secretsCache.get(key);
 
-            final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (value == null || value.getExpireTime().isBefore(Instant.now())) {
 
-            if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-                throw new RuntimeException("Problem connecting to Vault: " + response.body());
-            } else {
-                final var gson = new GsonBuilder()
-                        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                        .create();
-                final var secretResponse = gson.fromJson(response.body(), DynamicSecretResponse.class);
+                final var response = getCredentialsFromVault(credentials, address, secret);
 
-                log.info("Username used " + secretResponse.getData().getUsername());
-
-                connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, secretResponse.getData().getUsername());
-                connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, secretResponse.getData().getPassword());
+                value = new DynamicSecretValue(Instant.now(), response);
+				secretsCache.put(key, value);
             }
+
+            log.info("Username used " + value.getResponse().getData().getUsername());
+
+            connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, value.getResponse().getData().getUsername());
+            connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, value.getResponse().getData().getPassword());
+
         } catch (IOException | InterruptedException e) {
             throw new DBException("Problem connecting to Vault: " + e.getMessage(), e);
         }
 
         return credentials;
     }
+
+	private DynamicSecretResponse getCredentialsFromVault(
+			VaultAuthCredentials credentials,
+			final String address,
+			final String secret)
+			throws IOException, InterruptedException, DBException
+	{
+		final var token = getToken(credentials, address);
+
+		final var uri = URI.create(address).resolve("/v1/").resolve(secret);
+
+		final var request = HttpRequest.newBuilder()
+		        .GET()
+		        .header("X-Vault-Token", token)
+		        .uri(uri)
+		        .build();
+
+		final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+		if (response.statusCode() != HttpURLConnection.HTTP_OK) {
+		    throw new DBException("Problem connecting to Vault: " + response.body());
+		}
+		final var gson = new GsonBuilder()
+		        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+		        .create();
+
+		return gson.fromJson(response.body(), DynamicSecretResponse.class);
+	}
 
 
 	private String getAddress(VaultAuthCredentials credentials) {
