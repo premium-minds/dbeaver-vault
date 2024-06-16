@@ -1,6 +1,6 @@
  * Follow instructions to [Develop in Eclipse](https://github.com/dbeaver/dbeaver/wiki/Develop-in-Eclipse) for DBeaver
-   * A specific version of Eclipse may be needed. Checkout Eclipse 2022-03 at the moment.
-   * A specific version of DBeaver may be needed. Checkout tag 22.3.1 at the moment.
+   * A specific version of Eclipse may be needed. Checkout Eclipse 2024-06 at the moment.
+   * A specific version of DBeaver may be needed. Checkout tag 24.1.0 at the moment.
  * Get dbeaver-vault source code in the same workspace as DBeaver and import it `File -> Import... -> General -> Existing Projects Into Workspace`, with `Search for nested projects`
  * Modify or clone the run configuration `DBeaver.product` to include the dbeaver-vault plugin in the plugins tab
  * To build 
