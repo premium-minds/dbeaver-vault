@@ -259,11 +259,7 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
     public void refreshCredentials(DBRProgressMonitor monitor, DBPDataSourceContainer dataSource, DBPConnectionConfiguration configuration, VaultAuthCredentials credentials) throws DBException {
 
     }
-    
-	@Override
-	public boolean isDatabaseCredentialsPresent(DBPConnectionConfiguration configuration) {
-		return false;
-	}
+
     
     private static class StreamGobbler extends Thread {
 
