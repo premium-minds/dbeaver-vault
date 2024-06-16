@@ -14,8 +14,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -58,7 +58,7 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
-    private static final Map<DynamicSecretKey, DynamicSecretValue> secretsCache = new ConcurrentHashMap<>();
+    private static final Map<DynamicSecretKey, DynamicSecretResponse> secretsCache = new ConcurrentHashMap<>();
 
     @NotNull
     public VaultAuthCredentials createCredentials() {
@@ -97,22 +97,33 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
 
             log.info("Address used: " + address);
             log.info("Secret used: " + secret);
-            
-            DynamicSecretKey key = new DynamicSecretKey(address, secret);
-            DynamicSecretValue value = secretsCache.get(key);
 
-            if (value == null || value.getExpireTime().isBefore(Instant.now())) {
+            DynamicSecretKey key = new DynamicSecretKey(address, secret);
+            DynamicSecretResponse value = secretsCache.get(key);
+
+            if (value == null) {
 
                 final var response = getCredentialsFromVault(credentials, address, secret);
 
-                value = new DynamicSecretValue(Instant.now(), response);
-				secretsCache.put(key, value);
+                value = response;
+                secretsCache.put(key, value);
+
+            } else {
+                final var lease = getLeaseFromVault(credentials, address, value.getLeaseId());
+
+                if (!lease.isPresent()) {
+
+                    final var response = getCredentialsFromVault(credentials, address, secret);
+
+                    value = response;
+                    secretsCache.put(key, value);
+                }
             }
 
-            log.info("Username used " + value.getResponse().getData().getUsername());
+            log.info("Username used " + value.getData().getUsername());
 
-            connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, value.getResponse().getData().getUsername());
-            connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, value.getResponse().getData().getPassword());
+            connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, value.getData().getUsername());
+            connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, value.getData().getPassword());
 
         } catch (IOException | InterruptedException e) {
             throw new DBException("Problem connecting to Vault: " + e.getMessage(), e);
@@ -120,6 +131,39 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
 
         return credentials;
     }
+
+	private Optional<LeaseResponse> getLeaseFromVault(
+			VaultAuthCredentials credentials,
+			final String address,
+			final String leaseId)
+			throws IOException, InterruptedException, DBException
+	{
+		final var token = getToken(credentials, address);
+
+		final var uri = URI.create(address).resolve("/v1/sys/leases/lookup");
+
+		final var gson = new GsonBuilder()
+		        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+		        .create();
+
+		final var leaseRequest = new LeaseRequest();
+		leaseRequest.setLeaseId(leaseId);
+
+		final var request = HttpRequest.newBuilder()
+				.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(leaseRequest)))
+		        .header("X-Vault-Token", token)
+		        .uri(uri)
+		        .build();
+
+		final var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+		if (response.statusCode() != HttpURLConnection.HTTP_OK) {
+			log.info("No lease found for " + leaseId);
+		    return Optional.empty();
+		}
+
+		return Optional.of(gson.fromJson(response.body(), LeaseResponse.class));
+	}
 
 	private DynamicSecretResponse getCredentialsFromVault(
 			VaultAuthCredentials credentials,
