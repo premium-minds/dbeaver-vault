@@ -6,7 +6,7 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: Premium Minds
 Automatic-Module-Name: com.premiumminds.dbeaver.vault
 Bundle-RequiredExecutionEnvironment: JavaSE-11
-Require-Bundle: org.jkiss.dbeaver.model;bundle-version="1.0.168",
+Require-Bundle: org.jkiss.dbeaver.model;bundle-version="1.0.190.qualifier",
  com.google.gson,
  org.eclipse.swt,
  org.jkiss.dbeaver.ui;bundle-version="5.1.96"
