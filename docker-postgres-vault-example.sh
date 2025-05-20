@@ -30,7 +30,8 @@ vault write database/config/postgresql \
      connection_url="postgresql://{{username}}:{{password}}@localhost:5434/postgres?sslmode=disable" \
      allowed_roles=readonly \
      username="root" \
-     password="rootpassword"
+     password="rootpassword" \
+     password_authentication="scram-sha-256"
 
 tee readonly.sql <<EOF
 CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT;
