@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # https://learn.hashicorp.com/tutorials/vault/database-secrets
+# https://developer.hashicorp.com/vault/docs/secrets/databases/postgresql
 
 docker run \
     --detach \
