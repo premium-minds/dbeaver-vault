@@ -1,34 +1,14 @@
-package com.premiumminds.dbeaver.vault;
+package com.premiumminds.vault.client;
 
-public class DynamicSecretResponse {
+import java.util.Map;
 
-    public static class Data {
-
-        private String password;
-        private String username;
-
-        public String getUsername() {
-            return username;
-        }
-
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-    }
+class VaultResponse {
 
     private String requestId;
     private String leaseId;
     private Boolean renewable;
     private Long leaseDuration;
-    private Data data;
+    private Map<String, Object> data;
 
     public String getRequestId() {
         return requestId;
@@ -54,11 +34,11 @@ public class DynamicSecretResponse {
         this.renewable = renewable;
     }
 
-    public Data getData() {
+    public Map<String, Object> getData() {
         return data;
     }
 
-    public void setData(Data data) {
+    public void setData(Map<String, Object> data) {
         this.data = data;
     }
 
