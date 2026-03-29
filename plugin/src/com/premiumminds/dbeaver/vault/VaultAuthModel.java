@@ -25,12 +25,17 @@ import com.premiumminds.vault.client.VaultClient;
 public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
 
     private static final ILog log = Platform.getLog(VaultAuthModel.class);
-        
+
     public static final String PROP_SECRET = "secret";
     public static final String PROP_ADDRESS = "address";
     public static final String PROP_TOKEN_FILE = "token_file";
+    public static final String PROP_CERTIFICATE = "certificate";
+    public static final String PROP_SECRET_TYPE = "secret_type";
+    public static final String PROP_USERNAME_KEY = "username_key";
+    public static final String PROP_PASSWORD_KEY = "password_key";
     private static final String ENV_VAULT_AGENT_ADDR = "VAULT_AGENT_ADDR";
     private static final String ENV_VAULT_ADDR = "VAULT_ADDR";
+    private static final String ENV_VAULT_CACERT = "VAULT_CACERT";
     private static final String ERROR_VAULT_ADDRESS_NOT_DEFINED = "Vault address not defined";
     private static final String ERROR_VAULT_SECRET_NOT_DEFINED = "Vault secret not defined";
 
@@ -47,6 +52,10 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
         credentials.setSecret(configuration.getAuthProperty(PROP_SECRET));
         credentials.setVaultHost(configuration.getAuthProperty(PROP_ADDRESS));
         credentials.setTokenFile(configuration.getAuthProperty(PROP_TOKEN_FILE));
+        credentials.setCertificate(configuration.getAuthProperty(PROP_CERTIFICATE));
+        credentials.setSecretType(configuration.getAuthProperty(PROP_SECRET_TYPE));
+        credentials.setUsernameKey(configuration.getAuthProperty(PROP_USERNAME_KEY));
+        credentials.setPasswordKey(configuration.getAuthProperty(PROP_PASSWORD_KEY));
         return credentials;
     }
 
@@ -55,34 +64,45 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
         configuration.setAuthProperty(PROP_SECRET, credentials.getSecret());
         configuration.setAuthProperty(PROP_ADDRESS, credentials.getVaultHost());
         configuration.setAuthProperty(PROP_TOKEN_FILE, credentials.getTokenFile());
+        configuration.setAuthProperty(PROP_CERTIFICATE, credentials.getCertificate().toString());
+        configuration.setAuthProperty(PROP_SECRET_TYPE, credentials.getSecretType().name());
+        configuration.setAuthProperty(PROP_USERNAME_KEY, credentials.getUsernameKey());
+        configuration.setAuthProperty(PROP_PASSWORD_KEY, credentials.getPasswordKey());
     }
 
     @Override
     public Object initAuthentication(
-            DBRProgressMonitor monitor, 
-            DBPDataSource dataSource, 
-            VaultAuthCredentials credentials, 
-            DBPConnectionConfiguration configuration, 
-            Properties connectProps) throws DBException 
+            DBRProgressMonitor monitor,
+            DBPDataSource dataSource,
+            VaultAuthCredentials credentials,
+            DBPConnectionConfiguration configuration,
+            Properties connectProps) throws DBException
     {
 
         final var address = getAddress(credentials);
         final var secret = getSecret(credentials);
+        final var certificate = getCertificate(credentials);
 
-        log.info("Address used: " + address);
-        log.info("Secret used: " + secret);
-        
         DefaultVaultTokenLoader vaultTokenLoader = new DefaultVaultTokenLoader(
                 Optional.ofNullable(credentials.getTokenFile()).map(Path::of),
                 address
         );
 
-        final var credentialsRequest = Request.dynamicRequest();
-        final var key = new CacheKey(address, secret);
+        final Request credentialsRequest = switch (credentials.getSecretType()) {
+            case DYNAMIC_ROLE -> Request.dynamicRequest();
+            case STATIC_ROLE -> Request.staticRequest();
+            case KV1 -> Request.kv1Request(credentials.getUsernameKey(), credentials.getPasswordKey());
+            case KV2 -> Request.kv2Request(credentials.getUsernameKey(), credentials.getPasswordKey());
+        };
+
+        final var key = new CacheKey(address, secret, credentials.getSecretType());
+        log.info("Cache key used: " + key);
+
         final var value = secretsCache.compute(key, (k, v) -> {
             final var vaultClient = VaultClient.builder()
                     .withAddress(address)
                     .withTokenLoader(vaultTokenLoader)
+                    .withCertificate(certificate)
                     .build();
             try {
                 if (v == null) {
@@ -101,6 +121,9 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
             }
         });
 
+        if (value.username() == null || value.password() == null) {
+            throw new DBException("There is something wrong with the credentials obtained from Vault");
+        }
 
         log.info("Username used " + value.username());
 
@@ -110,30 +133,44 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
         return credentials;
     }
 
-	private String getAddress(VaultAuthCredentials credentials) {
-	    final var definedAddress = credentials.getVaultHost();
-	    if (definedAddress != null && !definedAddress.isBlank()) {
-	        return definedAddress;
-	    } else {
-	        final String vaultAgentAddrEnv = System.getenv(ENV_VAULT_AGENT_ADDR);
-	        if (vaultAgentAddrEnv != null && !vaultAgentAddrEnv.isBlank()){
-	            return vaultAgentAddrEnv;
-	        }
-	        final String vaultAddrEnv = System.getenv(ENV_VAULT_ADDR);
-	        if (vaultAddrEnv != null && !vaultAddrEnv.isBlank()){
-	            return vaultAddrEnv;
-	        }
-	    }
-	    throw new RuntimeException(ERROR_VAULT_ADDRESS_NOT_DEFINED);
-	}
+    private String getAddress(VaultAuthCredentials credentials) {
+        final var definedAddress = credentials.getVaultHost();
+        if (definedAddress != null && !definedAddress.isBlank()) {
+            return definedAddress;
+        } else {
+            final String vaultAgentAddrEnv = System.getenv(ENV_VAULT_AGENT_ADDR);
+            if (vaultAgentAddrEnv != null && !vaultAgentAddrEnv.isBlank()){
+                return vaultAgentAddrEnv;
+            }
+            final String vaultAddrEnv = System.getenv(ENV_VAULT_ADDR);
+            if (vaultAddrEnv != null && !vaultAddrEnv.isBlank()){
+                return vaultAddrEnv;
+            }
+        }
+        throw new RuntimeException(ERROR_VAULT_ADDRESS_NOT_DEFINED);
+    }
 
-	private String getSecret(VaultAuthCredentials credentials) {
-	    final var secret = credentials.getSecret();
-	    if (secret != null && !secret.isBlank()) {
-	        return secret;
-	    }
-	    throw new RuntimeException(ERROR_VAULT_SECRET_NOT_DEFINED);
-	}
+    private String getSecret(VaultAuthCredentials credentials) {
+        final var secret = credentials.getSecret();
+        if (secret != null && !secret.isBlank()) {
+            return secret;
+        }
+        throw new RuntimeException(ERROR_VAULT_SECRET_NOT_DEFINED);
+    }
+
+    private Path getCertificate(VaultAuthCredentials credentials) {
+        final var definedCertificate = credentials.getCertificate();
+        if (definedCertificate != null) {
+            return definedCertificate;
+        } else {
+            final String vaultCertificateEnv = System.getenv(ENV_VAULT_CACERT);
+            if (vaultCertificateEnv != null && !vaultCertificateEnv.isBlank()){
+                return Path.of(vaultCertificateEnv);
+            }
+        }
+        return null;
+    }
+
 
     @Override
     public void endAuthentication(DBPDataSourceContainer dataSource, DBPConnectionConfiguration configuration, Properties connProperties) {
