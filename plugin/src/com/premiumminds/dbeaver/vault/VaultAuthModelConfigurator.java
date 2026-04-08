@@ -20,8 +20,6 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
     protected Text usernameKeyText;
     protected Text passwordKeyText;
     protected Combo type;
-    protected Label usernameKeyLabel;
-    protected Label passwordKeyLabel;
 
     @Override
     public void createControl(Composite authPanel, Object object, Runnable propertyChangeListener) {
@@ -61,14 +59,14 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         type.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
         type.addModifyListener(e -> propertyChangeListener.run());
 
-        usernameKeyLabel = UIUtils.createLabel(authPanel, "Username key:");
+        Label usernameKeyLabel = UIUtils.createLabel(authPanel, "Username key:");
         usernameKeyLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
 
         usernameKeyText = new Text(authPanel, SWT.BORDER);
         usernameKeyText.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
         usernameKeyText.addModifyListener(e -> propertyChangeListener.run());
 
-        passwordKeyLabel = UIUtils.createLabel(authPanel, "Password key:");
+        Label passwordKeyLabel = UIUtils.createLabel(authPanel, "Password key:");
         passwordKeyLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
 
         passwordKeyText = new Text(authPanel, SWT.BORDER);
@@ -98,18 +96,14 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         switch (SecretType.values()[idx]) {
             case DYNAMIC_ROLE:
             case STATIC_ROLE:
-                usernameKeyText.setVisible(false);
-                passwordKeyText.setVisible(false);
-                usernameKeyLabel.setVisible(false);
-                passwordKeyLabel.setVisible(false);
+                usernameKeyText.setEnabled(false);
+                passwordKeyText.setEnabled(false);
                 break;
 
             case KV1:
             case KV2:
-                usernameKeyText.setVisible(true);
-                passwordKeyText.setVisible(true);
-                usernameKeyLabel.setVisible(true);
-                passwordKeyLabel.setVisible(true);
+                usernameKeyText.setEnabled(true);
+                passwordKeyText.setEnabled(true);
                 break;
         }
     }
