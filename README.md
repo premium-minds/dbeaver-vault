@@ -26,6 +26,32 @@ This plugin will cache credentials in memory until it expires.
 
 ![dbeaver-vault.png](./screenshots/dbeaver-vault.png)
 
+## Configuration
+
+Use the following settings to connect DBeaver to HashiCorp Vault and retrieve credentials:
+
+* **Secret** *(Required)*
+  The API path to the secret in Vault.
+* **Address** *(Optional)*
+  The Vault server URL.
+  If not specified, the plugin will use the `VAULT_AGENT_ADDR` environment variable, and then `VAULT_ADDR` as a fallback.
+* **Token File** *(Optional)*
+  Path to the Vault token file.
+  If not provided, the plugin will fall back to the Vault Token Helper, and then `$HOME/.vault-token`.
+* **SSL Certificate** *(Optional)*
+  Path to the SSL certificate to trust.
+  Defaults to the value of the `VAULT_CACERT` environment variable if not set.
+* **Secret Type** *(Required)*
+  The type of secret to retrieve. Supported values:
+  * Dynamic role
+  * Static role
+  * KV version 1
+  * KV version 2
+* **Username Key** *(Required for KV v1 and KV v2)*
+  The JSON key used to extract the database username from the secret.
+* **Password Key** *(Required for KV v1 and KV v2)*
+  The JSON key used to extract the database password from the secret.
+
 
 ## Limitations
 
