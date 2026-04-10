@@ -13,6 +13,7 @@ public class VaultAuthCredentials implements DBAAuthCredentials  {
     private String usernameKey;
     private String passwordKey;
     private Path certificate;
+    private String namespace;
 
     public String getSecret() {
         return secret;
@@ -78,6 +79,14 @@ public class VaultAuthCredentials implements DBAAuthCredentials  {
         if (certificate != null && !certificate.isBlank()) {
             this.certificate = Path.of(certificate);
         }
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     @Override

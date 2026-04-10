@@ -41,6 +41,9 @@ Use the following settings to connect DBeaver to HashiCorp Vault and retrieve cr
 * **SSL Certificate** *(Optional)*
   Path to the SSL certificate to trust.
   Defaults to the value of the `VAULT_CACERT` environment variable if not set.
+* **Namespace** *(Optional)*
+  Absolute or relative namespace path.
+  Defaults to the value of the `VAULT_NAMESPACE` environment variable if not set.
 * **Secret Type** *(Required)*
   The type of secret to retrieve. Supported values:
   * Dynamic role
