@@ -30,12 +30,14 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
     public static final String PROP_ADDRESS = "address";
     public static final String PROP_TOKEN_FILE = "token_file";
     public static final String PROP_CERTIFICATE = "certificate";
+    public static final String PROP_NAMESPACE = "namespace";
     public static final String PROP_SECRET_TYPE = "secret_type";
     public static final String PROP_USERNAME_KEY = "username_key";
     public static final String PROP_PASSWORD_KEY = "password_key";
     private static final String ENV_VAULT_AGENT_ADDR = "VAULT_AGENT_ADDR";
     private static final String ENV_VAULT_ADDR = "VAULT_ADDR";
     private static final String ENV_VAULT_CACERT = "VAULT_CACERT";
+    private static final String ENV_VAULT_NAMESPACE = "VAULT_NAMESPACE";
     private static final String ERROR_VAULT_ADDRESS_NOT_DEFINED = "Vault address not defined";
     private static final String ERROR_VAULT_SECRET_NOT_DEFINED = "Vault secret not defined";
 
@@ -82,6 +84,7 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
         final var address = getAddress(credentials);
         final var secret = getSecret(credentials);
         final var certificate = getCertificate(credentials);
+        final var namespace = getNamespace(credentials);
 
         DefaultVaultTokenLoader vaultTokenLoader = new DefaultVaultTokenLoader(
                 Optional.ofNullable(credentials.getTokenFile()).map(Path::of),
@@ -103,6 +106,7 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
                     .withAddress(address)
                     .withTokenLoader(vaultTokenLoader)
                     .withCertificate(certificate)
+                    .withNamespace(namespace)
                     .build();
             try {
                 if (v == null) {
@@ -171,6 +175,18 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
         return null;
     }
 
+    private String getNamespace(VaultAuthCredentials credentials) {
+        final var definedNamespace = credentials.getNamespace();
+        if (definedNamespace != null) {
+            return definedNamespace;
+        } else {
+            final String vaultNamespaceEnv = System.getenv(ENV_VAULT_NAMESPACE);
+            if (vaultNamespaceEnv != null && !vaultNamespaceEnv.isBlank()){
+                return vaultNamespaceEnv;
+            }
+        }
+        return null;
+    }
 
     @Override
     public void endAuthentication(DBPDataSourceContainer dataSource, DBPConnectionConfiguration configuration, Properties connProperties) {

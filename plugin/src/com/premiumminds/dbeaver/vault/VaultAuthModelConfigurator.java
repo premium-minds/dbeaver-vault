@@ -17,6 +17,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
     protected Text addressText;
     protected Text tokenFileText;
     protected Text certificateText;
+    protected Text namespaceText;
     protected Text usernameKeyText;
     protected Text passwordKeyText;
     protected Combo type;
@@ -51,6 +52,13 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         certificateText = new Text(authPanel, SWT.BORDER);
         certificateText.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
         certificateText.addModifyListener(e -> propertyChangeListener.run());
+
+        Label namespaceLabel = UIUtils.createLabel(authPanel, "Namespace:");
+        namespaceLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+
+        namespaceText = new Text(authPanel, SWT.BORDER);
+        namespaceText.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
+        namespaceText.addModifyListener(e -> propertyChangeListener.run());
 
         Label typeLabel = UIUtils.createLabel(authPanel, "Secret type:");
         typeLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
@@ -87,6 +95,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         addressText.setMessage("http://example.com");
         tokenFileText.setMessage("$HOME/.vault-token");
         certificateText.setMessage("path to certificate");
+        namespaceText.setMessage("Namespace");
         usernameKeyText.setMessage("username");
         passwordKeyText.setMessage("password");
     }
@@ -114,6 +123,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         final var address = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_ADDRESS);
         final var tokenFile = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_TOKEN_FILE);
         final var certificate = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_CERTIFICATE);
+        final var namespace = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_NAMESPACE);
         final var secretType = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_SECRET_TYPE);
         final var usernameKey = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_USERNAME_KEY);
         final var passwordKey = dataSource.getConnectionConfiguration().getAuthProperty(VaultAuthModel.PROP_PASSWORD_KEY);
@@ -129,6 +139,10 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         if (certificate != null) {
             certificateText.setText(certificate);
         }
+        if (namespace != null) {
+            namespaceText.setText(namespace);
+        }
+
         if(secretType != null) {
             type.select(SecretType.valueOf(secretType).ordinal());
             handleSelection();
@@ -147,6 +161,7 @@ public class VaultAuthModelConfigurator implements IObjectPropertyConfigurator<O
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_ADDRESS, this.addressText.getText());
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_TOKEN_FILE, this.tokenFileText.getText());
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_CERTIFICATE, this.certificateText.getText());
+        dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_NAMESPACE, this.namespaceText.getText());
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_SECRET_TYPE, SecretType.values()[this.type.getSelectionIndex()].name());
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_USERNAME_KEY, this.usernameKeyText.getText());
         dataSource.getConnectionConfiguration().setAuthProperty(VaultAuthModel.PROP_PASSWORD_KEY, this.passwordKeyText.getText());
