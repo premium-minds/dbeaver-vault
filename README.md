@@ -1,6 +1,6 @@
 # DBeaver Vault plugin
 
-Provides database credentials using [Vault dynamic secrets](https://www.vaultproject.io/docs/secrets/databases).
+Provides database credentials using [Vault](https://developer.hashicorp.com/vault) [Database secrets](https://www.vaultproject.io/docs/secrets/databases) and [KV secrets](https://developer.hashicorp.com/vault/docs/secrets/kv) engines.
 
 Vault login is not handled by this plugin.
 
