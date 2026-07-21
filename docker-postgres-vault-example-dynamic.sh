@@ -27,12 +27,11 @@ vault server -dev -dev-root-token-id root -dev-listen-address=127.0.0.1:8201
 vault secrets enable database
 
 vault write database/config/postgresql \
-     plugin_name=postgresql-database-plugin \
-     connection_url="postgresql://{{username}}:{{password}}@localhost:5434/postgres?sslmode=disable" \
-     allowed_roles=readonly \
-     username="root" \
-     password="rootpassword" \
-     password_authentication="scram-sha-256"
+      plugin_name=postgresql-database-plugin \
+      connection_url="postgresql://{{username}}:{{password}}@localhost:5434/postgres?sslmode=disable" \
+      allowed_roles=readonly \
+      username="root" \
+      password="rootpassword"
 
 tee readonly.sql <<EOF
 CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT;
@@ -53,6 +52,4 @@ vault read database/creds/readonly
 # Vault address: http://127.0.0.1:8201
 # Vault secret: database/creds/readonly
 # Vault token: <empty or /home/froque/.vault-token>
-
-
-
+# Secret Type: Dynamic role

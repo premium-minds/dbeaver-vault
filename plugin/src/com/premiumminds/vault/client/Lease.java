@@ -1,5 +1,5 @@
 package com.premiumminds.vault.client;
 
-public interface Lease {
+interface Lease {
     String leaseId();
 }
