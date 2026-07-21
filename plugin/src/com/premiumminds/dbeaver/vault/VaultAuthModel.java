@@ -1,10 +1,8 @@
 package com.premiumminds.dbeaver.vault;
 
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.Platform;
 import org.jkiss.code.NotNull;
@@ -16,9 +14,7 @@ import org.jkiss.dbeaver.model.access.DBAAuthModel;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
-import com.premiumminds.vault.client.Credentials;
 import com.premiumminds.vault.client.DefaultVaultTokenLoader;
-import com.premiumminds.vault.client.Lease;
 import com.premiumminds.vault.client.Request;
 import com.premiumminds.vault.client.VaultClient;
 
@@ -40,8 +36,6 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
     private static final String ENV_VAULT_NAMESPACE = "VAULT_NAMESPACE";
     private static final String ERROR_VAULT_ADDRESS_NOT_DEFINED = "Vault address not defined";
     private static final String ERROR_VAULT_SECRET_NOT_DEFINED = "Vault secret not defined";
-
-    private static final Map<CacheKey, Credentials> secretsCache = new ConcurrentHashMap<>();
 
     @NotNull
     public VaultAuthCredentials createCredentials() {
@@ -98,41 +92,23 @@ public class VaultAuthModel implements DBAAuthModel<VaultAuthCredentials>  {
             case KV2 -> Request.kv2Request(credentials.getUsernameKey(), credentials.getPasswordKey());
         };
 
-        final var key = new CacheKey(address, secret, credentials.getSecretType());
-        log.info("Cache key used: " + key);
+        final var vaultClient = VaultClient.builder()
+                .address(address)
+                .tokenLoader(vaultTokenLoader)
+                .certificate(certificate)
+                .namespace(namespace)
+                .cache(true)
+                .build();
+        final var creds = vaultClient.getCredentials(secret, credentialsRequest);
 
-        final var value = secretsCache.compute(key, (k, v) -> {
-            final var vaultClient = VaultClient.builder()
-                    .withAddress(address)
-                    .withTokenLoader(vaultTokenLoader)
-                    .withCertificate(certificate)
-                    .withNamespace(namespace)
-                    .build();
-            try {
-                if (v == null) {
-                    return vaultClient.getCredentials(secret, credentialsRequest);
-                } else {
-                    if (v instanceof Lease lease) {
-                        final var leaseOpt = vaultClient.getLease(lease.leaseId());
-                        if (leaseOpt.isEmpty()) {
-                            return vaultClient.getCredentials(secret, credentialsRequest);
-                        }
-                    }
-                }
-                return v;
-            } catch (Exception e) {
-                throw new RuntimeException("Problem connecting to Vault: " + e.getMessage(), e);
-            }
-        });
-
-        if (value.username() == null || value.password() == null) {
+        if (creds.username() == null || creds.password() == null) {
             throw new DBException("There is something wrong with the credentials obtained from Vault");
         }
 
-        log.info("Username used " + value.username());
+        log.info("Username used " + creds.username());
 
-        connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, value.username());
-        connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, value.password());
+        connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_USER, creds.username());
+        connectProps.put(DBConstants.DATA_SOURCE_PROPERTY_PASSWORD, creds.password());
 
         return credentials;
     }

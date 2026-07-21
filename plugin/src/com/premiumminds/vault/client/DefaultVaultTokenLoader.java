@@ -32,21 +32,24 @@ public class DefaultVaultTokenLoader implements VaultTokenLoader {
 
     @Override
     public String get() throws Exception {
-        if (tokenFile.isPresent() && !tokenFile.toString().isBlank()) {
+        if (tokenFile.isPresent() && !tokenFile.get().toString().isBlank()) {
             if (tokenFile.get().toFile().exists()){
+                assertRegularFile(tokenFile.get(), "Vault token file");
                 return Files.readString(tokenFile.get());
             }
         }
 
         final var vaultConfigFile = getConfigFile();
         if (vaultConfigFile.toFile().exists()){
+            assertRegularFile(vaultConfigFile, "Vault config file");
             final String token = getTokenFromVaultTokenHelper(vaultConfigFile, vaultAddress);
             if (token != null){
                 return token;
             }
         }
-        final var defaultTokenFilePath = Paths.get(System.getProperty("user.home"), DEFAULT_VAULT_TOKEN_FILE);
+        final var defaultTokenFilePath = Paths.get(getHome(), DEFAULT_VAULT_TOKEN_FILE);
         if (defaultTokenFilePath.toFile().exists()){
+            assertRegularFile(defaultTokenFilePath, "Vault token file");
             return Files.readString(defaultTokenFilePath);
         }
 
@@ -54,7 +57,7 @@ public class DefaultVaultTokenLoader implements VaultTokenLoader {
     }
 
     private Path getConfigFile(){
-        Path vaultConfigPath = Paths.get(System.getProperty("user.home"), DEFAULT_VAULT_CONFIG_FILE) ;
+        Path vaultConfigPath = Paths.get(getHome(), DEFAULT_VAULT_CONFIG_FILE) ;
 
         final String vaultConfigPathEnv = System.getenv(ENV_VAULT_CONFIG_PATH);
         if (vaultConfigPathEnv != null && !vaultConfigPathEnv.isBlank()){
@@ -62,6 +65,16 @@ public class DefaultVaultTokenLoader implements VaultTokenLoader {
         }
 
         return vaultConfigPath;
+    }
+
+    protected String getHome() {
+        return System.getProperty("user.home");
+    }
+
+    private static void assertRegularFile(Path path, String description) {
+        if (!Files.isRegularFile(path)) {
+            throw new IllegalArgumentException(description + " path is not a file: " + path);
+        }
     }
 
     private String getTokenFromVaultTokenHelper(Path configFile, String vaultAddress)
